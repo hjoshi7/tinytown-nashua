@@ -1,0 +1,11 @@
+{
+  "name": "tinytown-nashua",
+  "compatibility_date": "2026-09-01",
+  "build": {
+    "command": "python3 -m tinytown stage --target nashua"
+  },
+  "assets": {
+    "directory": "./dist/nashua",
+    "html_handling": "auto-trailing-slash"
+  }
+}

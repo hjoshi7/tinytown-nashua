@@ -1,4 +1,8 @@
 {
+  "nashua": {
+    "dist": "dist/nashua",
+    "wrangler": "wrangler.nashua.jsonc"
+  },
   "avon": {
     "dist": "dist/avon",
     "wrangler": "wrangler.avon.jsonc"

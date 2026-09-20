@@ -32,10 +32,19 @@ class AvonRoutes(unittest.TestCase):
         routes = config.routes('avon', ROOT)
         for route in ('/', '/avon', '/avon-extended', '/extended'):
             self.assertEqual(routes[route], 'avon-extended')
-            self.assertIn('content="avon-extended"', preview_document(route, ROOT))
+            self.assertIn('content="avon-extended"', preview_document(route, ROOT, target='avon'))
         settings = config.site_config('avon-extended', ROOT)
         self.assertEqual(settings['landmarks'], 'landmarks.json')
         self.assertTrue((ROOT / 'sites/avon-extended/landmarks.json').is_file())
+
+
+class NashuaRoutes(unittest.TestCase):
+    def test_default_preview_and_staged_target_select_nashua(self):
+        from tinytown import config
+        self.assertEqual(config.routes('nashua', ROOT), {'/': 'nashua'})
+        for document in (preview_document('/', ROOT), route_document('nashua', ROOT, target='nashua')):
+            self.assertIn('<meta name="town-site" content="nashua"', document)
+            self.assertIn('<title>Nashua, New Hampshire</title>', document)
 
 
 class DeployTargets(unittest.TestCase):

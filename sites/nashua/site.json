@@ -1,0 +1,10 @@
+{
+  "title": "Nashua, New Hampshire",
+  "description": "Explore downtown Nashua, New Hampshire as a tiny interactive 3D miniature, made with TinyTown.",
+  "deploy": [
+    {
+      "target": "nashua",
+      "route": "/"
+    }
+  ]
+}

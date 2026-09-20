@@ -1,144 +1,79 @@
-# tiny-town
+# TinyTown Nashua
 
-tiny-town turns a real place into a small, soft, isometric 3D miniature and
-serves it in a browser. Give it a centre and a size; it fetches OpenStreetMap
-footprints and roads, USGS terrain and aerial imagery, builds a scene, and
-renders it in Three.js in the spirit of Tiny Glade. A bounded model-authoring
-pipeline then turns Street View photographs of each building into a blueprint
-so the miniature is recognisably *that* town. Everything is one Python package
-(`tinytown/`) behind one CLI, `./town`.
+Downtown **Nashua, New Hampshire, USA**, built with [Koomen’s TinyTown](https://github.com/koomen/tinytown) using its documented “Make your own town” pipeline. This is a public fork, with the original renderer and authoring tools preserved.
 
-Live: **[avon.town](https://avon.town)** (Avon, New York, 3.3 × 3.6 km, 1,644
-structures) and **[chautauqua.town](https://chautauqua.town)**
-(Chautauqua Institution, 946 structures).
+The first area is **1.6 × 1.6 km**, centered at **42.7615, -71.4670**, around Main Street and the Nashua River. It contains **2,253 mapped buildings**, **2,190 road/path pieces**, and USGS terrain. The goal is to expand to the entire city after measuring larger areas.
 
-![Avon, New York as a miniature](social-preview.jpg)
+This first pass uses real map footprints and procedural building appearances. It does **not** yet have the photograph-informed, individually authored buildings that give the original Avon miniature its extra detail. The original reference/authoring pipeline is included for that next step.
 
-## Quickstart
+![Downtown Nashua miniature](sites/nashua/social-preview.jpg)
+
+## Run it
+
+Python 3.10+; Node 22+ for baking and tests. The viewer needs internet access for its pinned Three.js CDN modules.
+
+The upstream examples contain large generated assets. A sparse clone gets everything needed for Nashua without downloading those examples:
 
 ```sh
-git clone https://github.com/koomen/tinytown && cd tinytown
-python3 -m venv .venv && .venv/bin/pip install -e .   # Python 3.10+
+git clone --depth 1 --filter=blob:none --sparse https://github.com/hjoshi7/tinytown-nashua.git
+cd tinytown-nashua
+git sparse-checkout set tinytown src sites docs tests data/nashua
+python3 -m venv .venv
+.venv/bin/pip install -e .
 ./town serve
-# open http://localhost:8734/  (Avon), /avon (alias), /chautauqua, /?site=<name>
 ```
 
-`town serve` needs only the standard library; `./town` picks up `.venv`
-automatically (`pip install -e .` also puts a `town` command on your PATH, and
-`python3 -m tinytown …` always works). The viewer loads Three.js from a CDN,
-so it needs network access.
+Open **http://localhost:8734/?site=nashua&stream=1&focus=32285517&dist=450** for the baked streaming view. TinyTown shows its streaming diagnostics with this explicit flag. The initial link focuses on the Nashua Public Library by the river; drag and zoom to explore. The default root also selects Nashua; without `stream=1`, upstream uses its original in-browser generator for newly added towns, which is slower on this dense scene.
 
-## Make your own town
+You can also use a normal full clone. Nashua’s baked data is committed, so viewing does not require re-fetching maps, a model account, or installing the private browser.
+
+## Reproduce the miniature
+
+These are the upstream commands, with Nashua’s coordinates and name:
 
 ```sh
-./town browser setup                                              # private headless Chromium (once)
-./town fetch mytown --center 42.91201,-77.74548 --size 400,400 --title "My Town"
-./town build mytown                                               # -> data/mytown/site.json; view at /?site=mytown
-./town scope mytown --bounds S,W,N,E                              # optional: freeze which structures are in
-./town refs mytown --all                                          # Street View fronts and aerials per building
-./town author mytown --all --accept                               # model authoring: needs the Codex CLI (`codex login`)
-./town bake mytown                                                # terrain/pavement surfaces and streaming chunks
-./town stage --target avon                                       # after adding sites/mytown/site.json
+./town browser setup
+./town fetch nashua --center 42.7615,-71.4670 --size 1600,1600 --title "Nashua, New Hampshire"
+./town build nashua
+./town bake nashua
+./town bake nashua --check
+./town stage --target nashua
+./town serve --dist nashua
 ```
 
-Each verb is idempotent: re-running it does the missing work and exits 0.
-`./town --help` and `./town <verb> --help` list every flag. The walkthrough is
-[docs/pipeline.md](docs/pipeline.md); the authoring policy is
-[docs/authoring.md](docs/authoring.md); when something looks wrong, see
-[docs/fixing.md](docs/fixing.md).
+Open http://localhost:8734/?stream=1 when serving the staged target. Fetching is cached and resumable. On an existing clone, `fetch` downloads any missing local reference imagery; `--force` deliberately refreshes source data, so a future refresh may reflect newer OpenStreetMap edits.
 
-Prerequisites, by stage: Python ≥ 3.10 with `pillow` and `websocket-client`
-(installed by `pip install -e .`); Node ≥ 22 for `bake` and tests; the private
-headless Chromium from `./town browser setup` for `refs`, `render`, `author`,
-`bake` and browser tests; the [OpenAI Codex CLI](https://github.com/openai/codex)
-logged in for `author` only; network for OSM/USGS/Esri fetches, Street View
-capture and the Three.js CDN.
+This fork started from upstream commit `e7146e2f210d245b5dc952b2f37f267ee20cb68b`. The display title is set in `data/nashua/overrides.json`, as required by the upstream builder. Source requests and public geographic inputs are committed under `data/nashua/source/`. Third-party aerial and Street View reference images stay local and are excluded from Git and staged assets.
 
-## The look
+## Improve building detail
 
-A pale sky dome lights the scene alongside one warm, low sun with soft VSM
-shadows; GTAO, tilt-shift depth of field, bloom, ACES and a split-tone grade
-finish the frame. Materials are procedural (brick, stone, siding, shingles)
-with a faint world-space grain so flat vertex colour reads as plaster, asphalt
-or turf. Trees are gently lobed canopies wearing hundreds of small leaf dabs
-that light as one soft ball. Roads are coloured by where they are, never by
-which ribbon is drawn, so junctions paint alike. Terrain, roads and sidewalks
-share one piecewise-planar grade; buildings meet their real frontages. A
-day/night toggle swaps the lighting in place, and large maps stream detail by
-camera sector within fixed memory budgets. Details, streaming budgets and every
-viewer URL parameter: [docs/rendering.md](docs/rendering.md).
-
-## Repository map
-
-```
-town                 CLI shim: python -m tinytown "$@" (prefers .venv/)
-pyproject.toml       package metadata; `pip install -e .` installs `town`
-tinytown/            the package, one module per stage: sources, site, references,
-                     review, render, author, model, bake, deploy, browser, state, config, paths
-  plugins/           per-site hooks (avon.py, chautauqua.py)
-  web/               pages and scripts the pipeline drives in the browser (bake, stream export)
-index.html, src/     the viewer (Three.js modules, served as-is)
-sites/<site>/        site config: site.json (title, deploy routes, plugin), scope, labels, landmarks
-sites/deploy.json    deploy targets -> dist directory and Wrangler config
-data/<site>/         the miniature: source/, overrides.json, site.json, surfaces*, stream/, buildings/<id>/
-tests/               unit/ (python unittest), node/ (node --test), browser/ (headless drivers), run.sh
-docs/                ARCHITECTURE.md (the contract) and the guides below
-wrangler*.jsonc, _headers   Cloudflare Workers
-CLAUDE.md            notes for coding agents
-```
-
-Docs: [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [pipeline.md](docs/pipeline.md) ·
-[data-format.md](docs/data-format.md) · [authoring.md](docs/authoring.md) ·
-[fixing.md](docs/fixing.md) · [rendering.md](docs/rendering.md) ·
-[deploy.md](docs/deploy.md) · [landmarks.md](docs/landmarks.md) ·
-[chautauqua.md](docs/chautauqua.md) · [BLUEPRINT_SCHEMA.md](docs/BLUEPRINT_SCHEMA.md) ·
-[STYLE_SCHEMA.md](docs/STYLE_SCHEMA.md) · [MINIATURE_KIT.md](docs/MINIATURE_KIT.md)
-
-## Tests
+Follow [the original pipeline guide](docs/pipeline.md) and [authoring policy](docs/authoring.md). Start with a few buildings before running the whole area:
 
 ```sh
-tests/run.sh
+./town plan nashua --limit 5 --out queue.txt
+./town refs nashua --list queue.txt
+./town author nashua --dry-run
 ```
 
-Runs the Python unit tests (`tests/unit`, no network or model), the Node tests
-(`tests/node`) and, when the private browser is installed, the headless viewer
-suite (`node tests/browser/run.mjs`; `--list` names the other drivers, `all`
-runs them). See [CLAUDE.md](CLAUDE.md) for what each tier needs.
+Authoring requires an authenticated Codex CLI and consumes model usage. Select the desired building IDs from the queue and use `town author nashua ID --accept` with explicit token/time limits. After accepted changes, build and bake again. `town scope` is optional: a configured strict scope requires every included building to have an accepted blueprint before staging, so this procedural first pass uses the fetch boundary instead.
 
-## Deployment
+## Grow toward the full city
 
-Two Cloudflare Workers upload the static `dist/` directories that
-`./town stage` stages: `avon-town` serves avon.town (`/` Avon, `/avon` alias,
-`/avon-extended`, `/chautauqua`) and `chautauqua-miniature` serves
-chautauqua.town. Routes derive from `sites/*/site.json`. On push to `main`,
-Workers Builds runs `python3 -m tinytown stage --target …` with bare Python
-and Node; it only checks that the committed surfaces, streams and viewer stamps
-are current, so bake before you push. Verify with
-`./town verify town https://avon.town`. Details: [docs/deploy.md](docs/deploy.md).
+Keep the current center and enlarge `--size` in measured steps using `town fetch ... --force`, then rebuild and bake. Existing IDs can retain their authored models. For actual city-wide coverage, obtain and verify Nashua’s municipal boundary, rather than treating a large rectangle as the city limits.
 
-## Credits and attribution
+TinyTown already streams detail near the camera. Full-city performance is **not yet verified**: coarse regions can accumulate while exploring, and terrain, geometry, download size, and authoring work all grow with the area. Keep downtown as a working baseline and measure a wider area before replacing it. See [rendering and streaming](docs/rendering.md).
 
-- Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright)
-  contributors, via the Overpass API (ODbL 1.0).
-- Elevation: U.S. Geological Survey, [3D Elevation Program](https://www.usgs.gov/3dep)
-  (public domain).
-- Aerial imagery from Esri World Imagery, Google Street View panoramas and
-  web photographs are used locally as reference for authoring only. They are
-  gitignored, never committed and never deployed.
-- [Three.js](https://threejs.org) (MIT) from jsDelivr; fonts Nunito and
-  Fraunces from Google Fonts (SIL Open Font License).
-- Authoring uses the OpenAI Codex CLI; model names and aliases are in
-  `tinytown/model.py`.
+## Verification
 
-The miniatures depict real places, including real signage and business names,
-as hand-made caricatures. Signs are redrawn or procedural approximations, not
-brand artwork, and the project is not affiliated with or endorsed by any
-business or institution shown.
+See [the validation record](docs/nashua-validation.md) for the checked data, generated assets, and browser behavior. The upstream full regression suite requires the original example fixtures as well as Nashua, so run it from a full checkout or restore those fixture paths when using a sparse clone.
 
-## License
+## Upstream and credits
 
-Code is released under the MIT License (see [LICENSE](LICENSE)). The committed
-derived data under `data/` (`site.json`, `overrides.json`, `surfaces*.bin.gz`,
-`stream/`) is derived from OpenStreetMap and is available under the
-[Open Database License 1.0](https://opendatacommons.org/licenses/odbl/1-0/)
-with the attribution "© OpenStreetMap contributors".
+- [Original README](docs/upstream-readme.md), [architecture](docs/ARCHITECTURE.md), and [pipeline](docs/pipeline.md).
+- Code: MIT, retaining the original [LICENSE](LICENSE).
+- Map data: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL 1.0. Derived data under `data/` is available under ODbL 1.0.
+- Terrain: U.S. Geological Survey, 3D Elevation Program (public domain).
+- Reference imagery: Esri World Imagery, used locally; not redistributed.
+- Original TinyTown design and implementation: [Koomen](https://github.com/koomen/tinytown).
+
+This is an independent miniature project, not an official City of Nashua product. This repository publishes the code and data; no public website deployment is configured.
