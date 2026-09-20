@@ -8,6 +8,18 @@ This first pass uses real map footprints and procedural building appearances. It
 
 ![Downtown Nashua miniature](sites/nashua/social-preview.jpg)
 
+## Public website
+
+[Nashua miniature](https://hjoshi7.github.io/tinytown-nashua/) is hosted on GitHub Pages. The homepage selects streaming and the downtown starting view automatically. Add `?tiles=1` to show the optional streaming diagnostics.
+
+To republish after committing a map update:
+
+```sh
+python3 scripts/publish-pages.py
+```
+
+This runs the upstream staging checks and pushes only the static website to `gh-pages`; GitHub Pages publishes that branch. It keeps the source checkout on `main`. `scripts/stage-pages.py` can prepare the Pages bundle without publishing.
+
 ## Run it
 
 Python 3.10+; Node 22+ for baking and tests. The viewer needs internet access for its pinned Three.js CDN modules.
@@ -17,7 +29,7 @@ The upstream examples contain large generated assets. A sparse clone gets everyt
 ```sh
 git clone --depth 1 --filter=blob:none --sparse https://github.com/hjoshi7/tinytown-nashua.git
 cd tinytown-nashua
-git sparse-checkout set tinytown src sites docs tests data/nashua
+git sparse-checkout set tinytown src sites docs tests scripts data/nashua
 python3 -m venv .venv
 .venv/bin/pip install -e .
 ./town serve
@@ -76,4 +88,4 @@ See [the validation record](docs/nashua-validation.md) for the checked data, gen
 - Reference imagery: Esri World Imagery, used locally; not redistributed.
 - Original TinyTown design and implementation: [Koomen](https://github.com/koomen/tinytown).
 
-This is an independent miniature project, not an official City of Nashua product. This repository publishes the code and data; no public website deployment is configured.
+This is an independent miniature project, not an official City of Nashua product. The public website is served from the `gh-pages` branch of this repository.
